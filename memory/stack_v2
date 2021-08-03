@@ -3,7 +3,7 @@
     For detailed explanation of how types work.
     Read memoryallocator.txt
 
-    improvements:
+    improvements over version 1:
 
     1) Literal types added (just add 10_k for literal type)
 
@@ -21,6 +21,7 @@
         std::stack<T>::size() == sizeof(T); //where T == T
 
     5x faster than version 1
+    20% smaller than version 1
 
 */
 
