@@ -1,0 +1,589 @@
+/*
+    Pulga c++ version 2.0
+    For detailed explanation of how types work.
+    Read memoryallocator.txt
+
+    improvements:
+
+    1) Literal types added (just add 10_k for literal type)
+
+    pulga::stack x{10};
+    2) std::cout << x.out() << std::endl; //version 1
+       std::cout << x << std::endl; //version 2
+
+    3) input now supported in version 2
+        std::cin>> x; //invalid in version 1 use x.out
+        std::cin >> x; //valid in version 2
+
+    4)  in  version 1
+        std::stack<T>::size() != sizeof(T); //where T == T
+        in version 2
+        std::stack<T>::size() == sizeof(T); //where T == T
+
+    5x faster than version 1
+
+*/
+
+
+#include<type_traits>
+#include<limits>
+
+#include<iostream>
+
+
+
+namespace pulga{
+
+    template<class T>
+    class stack{
+    private:
+        T index;
+    public:
+        using type = T;
+        static_assert(std::is_fundamental<T>::value); //supports only fundamental type
+        constexpr explicit(std::is_fundamental<T>::value) stack(T arg):index{arg}{}
+        stack(const stack<T>&copy):index{copy.index}{}
+
+
+        constexpr size_t size()const {return sizeof(T);}
+        constexpr T max()const { return std::numeric_limits<T>::max();}
+        constexpr T min()const { return std::numeric_limits<T>::min();}
+        constexpr unsigned char from()const {return 'k';} //mechanism unsafe
+        constexpr T out()const { return this->index;}
+
+
+
+        template<typename X>
+        constexpr auto operator=(const X& arg){
+            static_assert(!T{X{}}); //prevent narrowing
+            return this->index = static_cast<T>(arg); //safety of narrowing
+        }
+
+        template<typename X>
+        constexpr auto operator=(const pulga::stack<X>& arg){
+            static_assert(!T{X{}}); //prevent narrowing
+            return this->index = static_cast<T>(arg.out()); //safety of narrowing
+        }
+
+        constexpr decltype(auto) operator++(){return --this->index;}
+        constexpr decltype(auto) operator--(){ return --this->index;}
+        constexpr decltype(auto) operator++(int){return this->index++;}
+        constexpr decltype(auto) operator--(int){ return this->index++;}
+        constexpr decltype(auto) operator-()const{ return -this->index;}
+        constexpr decltype(auto) operator+()const{ return +this->index;}
+        constexpr decltype(auto) operator~()const{ return ~this->index;} //Does not support floating point
+        constexpr decltype(auto) operator&()const{ return &this->index;}
+        constexpr bool operator!()const{return !this->index;}
+        constexpr decltype(auto) operator*()const=delete;
+
+        template<typename Tx>
+        constexpr  operator Tx()const{return static_cast<Tx>(this->index);}
+
+        constexpr explicit operator bool()const{ return static_cast<bool>(this->index);}
+
+        template<typename Tx> constexpr operator[](Tx)const=delete;
+
+        //add operator
+
+        template<typename Tx>
+        constexpr decltype(auto) operator+(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands"); //must be fundamental type for safety
+            return this->index + arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator+(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands");
+            return this->index + arg.index;
+
+        }
+
+
+
+        // sub operator
+
+        template<typename Tx>
+        constexpr decltype(auto) operator-(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands"); //must be fundamental type for safety
+            return this->index - arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator-(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands");
+            return this->index - arg.index;
+
+        }
+
+
+        //mul operator
+        template<typename Tx>
+        constexpr decltype(auto) operator*(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands"); //must be fundamental type for safety
+            return this->index * arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator*(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands");
+            return this->index * arg.index;
+
+        }
+
+
+
+        ///////////////////////////////////////////////////////
+        template<typename Tx>
+        constexpr decltype(auto) operator%(Tx arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index % arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator%(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index * arg.index;
+
+        }
+
+
+        ////////////////////////////////////////////////////////
+
+
+        //div operator
+        template<typename Tx>
+        constexpr decltype(auto) operator/(Tx arg)const[[expects(arg != 0)]]{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands"); //must be fundamental type for safety
+            return this->index / arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator/(const pulga::stack<Tx>& arg)const[[expects(arg != 0)]]{
+            static_assert(std::is_fundamental<Tx>::value,
+                          "Operator only supports fundamental types as operands");
+            return this->index / arg.index;
+
+        }
+
+
+
+        //bitwise & operator
+        template<typename Tx>
+        constexpr decltype(auto) operator&(Tx arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands"); //must be integral type for safety
+
+            return this->index & arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator&(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands");
+            return this->index & arg.index;
+
+        }
+
+
+
+        //bitwise | operator
+        template<typename Tx>
+        constexpr decltype(auto) operator|(Tx arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands"); //must be integral type for safety
+
+            return this->index | arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator|(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands");
+            return this->index | arg.index;
+
+        }
+
+
+        //bitwise ^ operator
+        template<typename Tx>
+        constexpr decltype(auto) operator^(Tx arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands"); //must be integral type for safety
+
+            return this->index ^ arg;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator^(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operator supports only integer operands");
+            return this->index ^ arg.index;
+
+        }
+
+
+
+        // the << and >> operator
+        constexpr decltype(auto) operator>>(unsigned hop)const[[expects(x != 0)]]{
+            static_assert(std::is_integral<T>::value,
+                          "Operator supports only integer operands");
+            //static_assert(hop == 0, "Operands cannot be negative or zero");
+            return this->arg >> hop;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator>>(const pulga::stack<Tx>& arg2)const{
+            static_assert(std::is_integral<Tx>::value && std::is_integral<T>::value,
+                          "Operator supports only integer operands");
+            return this->arg >> arg2.index;
+        }
+
+        constexpr decltype(auto) operator<<(unsigned hop)const{
+            static_assert(std::is_integral<T>::value,
+                          "Operator supports only integer operands");
+            //static_assert(hop == 0, "Operands cannot be negative or zero");
+            return this->arg << hop;
+        }
+
+        template<typename Tx>
+        constexpr decltype(auto) operator<<(const pulga::stack<Tx>& arg2)const{
+            static_assert(std::is_integral<Tx>::value && std::is_integral<T>::value,
+                          "Operator supports only integer operands");
+            return this->arg << arg2.index;
+        }
+
+        /////////////////////////////////////////
+
+
+        template<typename Tx>
+        constexpr bool operator<(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index < arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator<(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index < arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator>(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index > arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator>(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index > arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator<=(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index <= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator<=(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index <= arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator>=(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index >= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator>=(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index >= arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator==(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index == arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator==(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index == arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator!=(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index != arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator!=(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index != arg.index;
+
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator<=>(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index <=> arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator<=>(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index >= arg.index;
+
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator&&(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index && arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator&&(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index && arg.index;
+
+        }
+
+
+         template<typename Tx>
+        constexpr bool operator||(Tx arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index || arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator||(const pulga::stack<Tx>& arg)const{
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index || arg.index;
+
+        }
+
+
+         template<typename Tx>
+        constexpr bool operator+=(Tx arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index += arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator+=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index += arg.index;
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator-=(Tx arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index -= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator-=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index -= arg.index;
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator*=(Tx arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index *= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator*=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index *= arg.index;
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator/=(Tx arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index /= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator/=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_fundamental<Tx>::value);
+            return this->index /= arg.index;
+        }
+
+        /*Uncomment this , if using lesser version of gcc i think
+        template<typename Tx, typename Tv>
+        friend constexpr bool operator/=(Tx arg1, const pulga::stack<Tv>& arg2){
+            static_assert(std::is_fundamental<Tx>::value);
+            return arg1 /= arg2.index;
+        }
+        */
+
+
+        template<typename Tx>
+        constexpr bool operator%=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                        "Operands must be integral type");
+            return this->index %= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator%=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index %= arg.index;
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator&=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index &= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator&=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index &= arg.index;
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator^=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index ^= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator^=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index ^= arg.index;
+        }
+
+
+
+
+        template<typename Tx>
+        constexpr bool operator|=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index |= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator|=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index |= arg.index;
+        }
+
+
+
+
+        template<typename Tx>
+        constexpr bool operator>>=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index >>= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator>>=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index >>= arg.index;
+        }
+
+
+
+        template<typename Tx>
+        constexpr bool operator<<=(Tx arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index <<= arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator<<=(const pulga::stack<Tx>& arg){
+            static_assert(std::is_integral<T>::value && std::is_integral<Tx>::value,
+                          "Operands must be integral type");
+            return this->index <<= arg.index;
+        }
+
+
+        template<typename Tx>
+        constexpr bool operator,(Tx arg){
+            static_assert(std::is_fundamental<T>::value && std::is_fundamental<Tx>::value,
+                          "Must be fundamental type");
+            return this->index , arg;
+        }
+
+        template<typename Tx>
+        constexpr bool operator,(const pulga::stack<Tx>& arg){
+            static_assert(std::is_fundamental<T>::value && std::is_fundamental<Tx>::value,
+                          "Must be fundamental type");
+            return this->index , arg.index;
+        }
+
+    };
+
+
+    template<typename T> //output
+    constexpr std::ostream& operator<<(std::ostream&init, pulga::stack<T>&out){
+        std::cout << out.out();
+        return init;
+    }
+
+    template<typename T> //input
+    constexpr std::istream& operator>>(std::istream&init, pulga::stack<T>&in){
+        std::cin>> in.out();
+        return init;
+    }
+
+}
+
+
+constexpr pulga::stack<long double> operator""_k(long double x){
+        return pulga::stack<long double>{x};
+}
